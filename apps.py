@@ -3,7 +3,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-from io import BytesIO
+from collections import Counter
 
 st.set_page_config(layout="wide")
 st.title("🎯 Powerball Winning Numbers Analysis & Prediction Tool")
@@ -67,27 +67,27 @@ if uploaded_file is not None:
         'Standard Deviation (Main)': np.std(all_nums),
         'Standard Deviation (Powerball)': np.std(numbers['Powerball'])
     }
-    stats_df = pd.DataFrame(stats, index=[0])
-    st.write(stats_df)
+    st.write(pd.DataFrame(stats, index=[0]))
 
     st.subheader("🔮 Suggested Numbers Based on Frequency")
-    top_main = pd.Series(all_nums).value_counts().head(5).sort_index()
-    top_powerball = numbers['Powerball'].value_counts().head(1).sort_index()
-    st.markdown("**Most Frequent Main Numbers:**")
+    top_main = pd.Series(all_nums).value_counts().head(10)
+    top_powerball = numbers['Powerball'].value_counts().head(5)
+    st.markdown("**Top 10 Frequent Main Numbers:**")
     st.write(list(top_main.index))
-    st.markdown("**Most Frequent Powerball:**")
-    st.write(int(top_powerball.index[0]))
+    st.markdown("**Top 5 Frequent Powerball Numbers:**")
+    st.write(list(top_powerball.index))
 
-    st.subheader("🎲 Random Smart Pick Based on Top Frequencies")
-    random_pick = np.random.choice(top_main.index, 5, replace=False)
-    power_pick = int(top_powerball.index[0])
-    st.markdown(f"**Your Suggested Pick:** {sorted(random_pick)} + Powerball: {power_pick}")
+    st.subheader("🎲 Smart Random Picks (Weighted by Frequency)")
+    def weighted_random_choice(counter, size, max_num):
+        items = list(counter.items())
+        items = [item for item in items if item[0] <= max_num]
+        nums, weights = zip(*items)
+        return sorted(np.random.choice(nums, size=size, replace=False, p=np.array(weights)/sum(weights)))
 
-    # Downloadable report
-    st.subheader("📥 Download Statistical Report")
-    buffer = BytesIO()
-    stats_df.to_csv(buffer, index=False)
-    st.download_button(label="Download CSV Report", data=buffer.getvalue(), file_name="powerball_stats_report.csv", mime="text/csv")
+    smart_main = weighted_random_choice(Counter(all_nums), 5, 69)
+    smart_powerball = weighted_random_choice(Counter(numbers['Powerball']), 1, 26)[0]
+
+    st.markdown(f"**AI-Weighted Pick:** {smart_main} + Powerball: {smart_powerball}")
 
 else:
     st.info("⬆️ Please upload a Powerball CSV file to begin analysis.")
